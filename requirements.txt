@@ -7,4 +7,5 @@ passlib[bcrypt]
 python-dotenv
 pytest
 pydantic-settings
+pydantic[email]
 
