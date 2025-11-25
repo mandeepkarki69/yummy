@@ -33,7 +33,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV /home/mandeep/Desktop/python_learning/yummy/venv
+set -gx VIRTUAL_ENV /home/mandeep/Desktop/python_projects/yummy/venv
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/"bin $PATH
