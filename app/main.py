@@ -1,11 +1,18 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 
 from app.controller import user_controller
 from app.controller import auth_controller
 from app.core.database import engine, Base
 import asyncio
 
+from app.core.exception_handlers import http_exception_handler, validation_exception_handler
+
 app = FastAPI(title="Yummy API", version="1.0")
+
+
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 # Include routers
 app.include_router(user_controller.router)
