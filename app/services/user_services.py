@@ -10,6 +10,13 @@ class UserService:
 
     async def get_user(self, user_id: int):
         return await self.repo.get_user_by_id(user_id)
+    
+    async def get_user_by_email(self, email: str):
+        
+        return await self.repo.get_user_by_email(email)
+    
+    async def get_all_users(self):
+        return await self.repo.get_all_users()
 
     async def create_user(self, user_data: UserCreate):
         hashed_password = get_password_hash(user_data.password)

@@ -1,4 +1,4 @@
-#!/home/mandeep/Desktop/python_projects/yummy/venv/bin/python
+#!/home/mandeep/Desktop/python_projects/yummy/venv/bin/python3
 import sys
 from pygments.cmdline import main
 if __name__ == '__main__':

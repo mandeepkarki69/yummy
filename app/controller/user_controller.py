@@ -14,6 +14,13 @@ async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
     return await service.create_user(user)
 
+@router.get("/all", response_model=list[UserRead])
+async def get_all_users(db: AsyncSession = Depends(get_db)):
+    service = UserService(db)
+    return await service.get_all_users()
+
+
+
 @router.get("/{user_id}", response_model=UserRead)
 async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
     service = UserService(db)

@@ -9,4 +9,10 @@ python-dotenv
 pytest
 pydantic-settings
 pydantic[email]
+python-jose==3.5.0
+ecdsa==0.19.1
+six==1.17.0
+cryptography==46.0.3
+python-multipart==0.0.6
+
 
