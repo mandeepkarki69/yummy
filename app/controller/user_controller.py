@@ -3,14 +3,14 @@ from app.utils.role_checker import RoleChecker
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.schema.user_schema import UserCreate, UserRead, AdminCreate
+from app.schema.user_schema import UserCreate, UserRead, AdminCreate, AdminRead
 from app.services.user_services import UserService
 from app.schema.base_response import BaseResponse
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@router.post("/admin/register", response_model=BaseResponse[UserRead], status_code=status.HTTP_201_CREATED)
+@router.post("/admin/register", response_model=BaseResponse[AdminRead], status_code=status.HTTP_201_CREATED)
 async def create_admin_user(user: AdminCreate, db: AsyncSession = Depends(get_db)):
      service = UserService(db)
      existing_user = await service.repo.get_user_by_email(user.email)
@@ -22,8 +22,6 @@ async def create_admin_user(user: AdminCreate, db: AsyncSession = Depends(get_db
         message="Admin user created successfully",
         data=new_user
     )
-
-    
 
 @router.post("/", response_model=BaseResponse[UserRead],
              status_code=status.HTTP_201_CREATED,

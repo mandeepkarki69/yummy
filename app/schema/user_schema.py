@@ -12,6 +12,17 @@ class AdminCreate(BaseModel):
     email: EmailStr
     password: str
     confirm_password: str
+    
+class AdminRead(BaseModel):
+    id: int
+    name: str
+    email: EmailStr
+    role : str
+    access_token: str
+    token_type: str
+    
+    class Config:
+        orm_mode = True
 
 class UserRead(BaseModel):
     id: int
