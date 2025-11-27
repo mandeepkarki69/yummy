@@ -6,6 +6,12 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     role: str
+    
+class AdminCreate(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    confirm_password: str
 
 class UserRead(BaseModel):
     id: int
