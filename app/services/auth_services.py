@@ -30,7 +30,13 @@ class AuthServices:
             )
 
         # Create JWT token
-        token = create_access_token({"user_id": user.id})
+        # app/services/auth_services.py
+
+        token = create_access_token({
+                "user_id": user.id,
+                "role": user.role
+         })
+
 
         # Return full LoginResponse structure
         return {

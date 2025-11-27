@@ -1,4 +1,5 @@
 # app/routes/user_router.py
+from app.utils.role_checker import RoleChecker
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
@@ -8,7 +9,9 @@ from app.schema.base_response import BaseResponse
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
-@router.post("/", response_model=BaseResponse[UserRead], status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=BaseResponse[UserRead],
+             status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(RoleChecker(["admin"]))])
 async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
     service = UserService(db)
     existing_user = await service.repo.get_user_by_email(user.email)
@@ -21,7 +24,8 @@ async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
         data=new_user
     )
 
-@router.get("/all", response_model=BaseResponse[list[UserRead]])
+@router.get("/all", response_model=BaseResponse[list[UserRead]],
+            dependencies=[Depends(RoleChecker(["admin"]))])
 async def get_all_users(db: AsyncSession = Depends(get_db)):
     service = UserService(db)
     users = await service.get_all_users()
@@ -31,7 +35,8 @@ async def get_all_users(db: AsyncSession = Depends(get_db)):
         data=users
     )
 
-@router.get("/{user_id}", response_model=BaseResponse[UserRead])
+@router.get("/{user_id}", response_model=BaseResponse[UserRead], 
+            dependencies=[Depends(RoleChecker(["admin"]))])
 async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
     service = UserService(db)
     user = await service.get_user(user_id)

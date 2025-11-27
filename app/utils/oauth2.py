@@ -27,15 +27,21 @@ def create_access_token(data: dict):
 def verify_token(token: str, credentials_exception):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        id: str = payload.get("user_id")
+        
+        user_id: str = payload.get("user_id")
+        role: str = payload.get("role")
 
-        if id is None:
+        if user_id is None or role is None:
             raise credentials_exception
-
-        return schema.TokenData(id=id)
+        
+        return {
+            "user_id": user_id,
+            "role": role
+        }
 
     except JWTError:
         raise credentials_exception
+
 
 
 def get_current_user(token: str = Depends(oauth2_scheme)):
