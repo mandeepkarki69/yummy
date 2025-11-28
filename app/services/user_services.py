@@ -17,17 +17,18 @@ class UserService:
         
         return await self.repo.get_user_by_email(email)
     
-    async def get_all_users(self):
-        return await self.repo.get_all_users()
+    async def get_all_users(self, admin_id: int):
+        return await self.repo.get_all_users(admin_id)
 
-    async def create_user(self, user_data: UserCreate):
+    async def create_user(self, user_data: UserCreate, admin_id: int):
         hashed_password = get_password_hash(user_data.password)
         user_data.password = hashed_password
         user = User(
             name=user_data.name,
             email=user_data.email,
             password=user_data.password,
-            role= user_data.role  
+            role= user_data.role,
+            created_by=admin_id
         )
         return await self.repo.create_user(user)
     

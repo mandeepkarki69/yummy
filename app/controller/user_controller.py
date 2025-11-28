@@ -1,4 +1,5 @@
 # app/routes/user_router.py
+from app.utils.oauth2 import get_current_user
 from app.utils.role_checker import RoleChecker
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +12,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 
 @router.post("/admin/register", response_model=BaseResponse[AdminRead], status_code=status.HTTP_201_CREATED)
-async def create_admin_user(user: AdminCreate, db: AsyncSession = Depends(get_db)):
+async def create_admin_user(user: AdminCreate, db: AsyncSession = Depends(get_db) ):
      service = UserService(db)
      existing_user = await service.repo.get_user_by_email(user.email)
      if existing_user:
@@ -25,14 +26,14 @@ async def create_admin_user(user: AdminCreate, db: AsyncSession = Depends(get_db
 
 @router.post("/", response_model=BaseResponse[UserRead],
              status_code=status.HTTP_201_CREATED,
-             dependencies=[Depends(RoleChecker(["admin"]))])
-async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
+             dependencies=[Depends(RoleChecker(["admin"]))], )
+async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)):
     
     service = UserService(db)
     existing_user = await service.repo.get_user_by_email(user.email)
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-    new_user = await service.create_user(user)
+    new_user = await service.create_user(user, current_user["user_id"])
     return BaseResponse(
         status="success",
         message="User created successfully",
@@ -41,9 +42,9 @@ async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
 
 @router.get("/all", response_model=BaseResponse[list[UserRead]],
             dependencies=[Depends(RoleChecker(["admin"]))])
-async def get_all_users(db: AsyncSession = Depends(get_db)):
+async def get_all_users(db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)):
     service = UserService(db)
-    users = await service.get_all_users()
+    users = await service.get_all_users(current_user["user_id"])
     return BaseResponse(
         status="success",
         message=f"{len(users)} users fetched successfully",

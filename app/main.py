@@ -3,6 +3,10 @@ from fastapi.exceptions import RequestValidationError
 
 from app.controller import user_controller
 from app.controller import auth_controller
+from app.controller import restaurant_controller
+from app.controller import restaurant_table_type_controller
+from app.controller import restaurant_table_controller
+
 from app.core.database import engine, Base
 import asyncio
 
@@ -17,6 +21,9 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 # Include routers
 app.include_router(user_controller.router)
 app.include_router(auth_controller.router)
+app.include_router(restaurant_controller.router)
+app.include_router(restaurant_table_controller.router)
+app.include_router(restaurant_table_type_controller.router)
 
 # Create tables at startup
 @app.on_event("startup")

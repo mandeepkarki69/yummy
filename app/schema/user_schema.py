@@ -29,6 +29,7 @@ class UserRead(BaseModel):
     name: str
     email: EmailStr
     role: str
+    created_by: int
 
     class Config:
         orm_mode = True
