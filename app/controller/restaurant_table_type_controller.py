@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.schema.restaurant_table_type_schema import RestaurantTableTypeRead, RestaurantTableTypeCreate
+from app.schema.restaurant_table_type_schema import RestaurantTableTypeRead, RestaurantTableTypeCreate, RestaurantTableTypeUpdate
 from app.services.restaurant_table_type_service import RestaurantTypeService
 from app.utils.oauth2 import get_current_user
 from app.utils.role_checker import RoleChecker
@@ -52,21 +52,37 @@ async def get_all_table_types(restaurant_id: int, db: AsyncSession = Depends(get
 
 
 # Get Single Table Type
-@router.get(
-    "/single/{table_type_id}",
+# @router.get(
+#     "/single/{table_type_id}",
+#     response_model=BaseResponse[RestaurantTableTypeRead],
+#     dependencies=[Depends(RoleChecker(["admin", "staff"]))],
+# )
+# async def get_table_type(table_type_id: int, db: AsyncSession = Depends(get_db)):
+#     service = RestaurantTypeService(db)
+#     table_type = await service.get_restaurant_table_type_by_id(table_type_id)
+
+#     return BaseResponse(
+#         status="success",
+#         message="Table type fetched successfully",
+#         data=table_type,
+#     )
+    
+
+# Update Table Type
+@router.put(
+    "/{table_type_id}",
     response_model=BaseResponse[RestaurantTableTypeRead],
     dependencies=[Depends(RoleChecker(["admin", "staff"]))],
 )
-async def get_table_type(table_type_id: int, db: AsyncSession = Depends(get_db)):
+async def update_table_type(table_type_id: int, data: RestaurantTableTypeUpdate, db: AsyncSession = Depends(get_db)):
     service = RestaurantTypeService(db)
-    table_type = await service.get_restaurant_table_type_by_id(table_type_id)
+    table_type = await service.update_restaurant_table_type(table_type_id, data)
 
     return BaseResponse(
         status="success",
-        message="Table type fetched successfully",
+        message="Table type updated successfully",
         data=table_type,
     )
-    
     
 # Delete Table Type
 @router.delete(
@@ -82,3 +98,5 @@ async def delete_table_type(table_type_id: int, db: AsyncSession = Depends(get_d
         message=result["message"],
         data=None,
     )
+    
+

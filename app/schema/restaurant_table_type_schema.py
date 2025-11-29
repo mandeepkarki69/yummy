@@ -3,7 +3,6 @@ from pydantic import BaseModel
 class RestaurantTableTypeCreate(BaseModel):
     name: str
     
-    
 
 class RestaurantTableTypeRead(BaseModel):
     id: int
@@ -12,6 +11,14 @@ class RestaurantTableTypeRead(BaseModel):
     
     class Config:
         orm_mode = True
+        
+class RestaurantTableTypeUpdate(BaseModel):
+    name: str | None = None
+    
+    class Config:
+        orm_mode = True
+    
+    
         
         
 

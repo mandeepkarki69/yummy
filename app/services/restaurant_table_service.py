@@ -45,15 +45,23 @@ class RestaurantTableService:
         await self.db.delete_restaurant_table(table)
         return {"message": "Table deleted successfully"}
     
-    async def update_restaurant_table(self , table_id: int , data: RestaurantTableUpdate):
+    async def update_restaurant_table(self, table_id: int, data: RestaurantTableUpdate):
         table = await self.db.get_restaurant_table_by_id(table_id)
         if not table:
             raise HTTPException(status_code=404, detail="Table not found")
-        table.table_name = data.table_name
-        table.capacity = data.capacity
-        table.table_type_id = data.table_type_id
-        table.status = data.status
+
+        # Only update fields if they are provided
+        if data.name is not None:
+            table.table_name = data.name
+        if data.capacity is not None:
+            table.capacity = data.capacity
+        if data.table_type_id is not None:
+            table.table_type_id = data.table_type_id
+        if data.status is not None:
+            table.status = data.status
+
         return await self.db.update_restaurant_table(table)
+
     
     
         

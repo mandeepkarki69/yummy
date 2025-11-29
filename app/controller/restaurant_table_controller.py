@@ -49,7 +49,7 @@ async def update_table(table_id: int, data: RestaurantTableUpdate, db: AsyncSess
     )
     
 @router.get(
-    "/by-table-type/{table_id}",  response_model=BaseResponse[RestaurantTableRead],
+    "/by-table-type/{table_id}",  response_model=BaseResponse[list[RestaurantTableRead]],
     dependencies=[Depends(RoleChecker(["admin", "staff"]))],)
 async def get_table_by_table_type(table_id: int, db: AsyncSession = Depends(get_db)):
     service = RestaurantTableService(db)

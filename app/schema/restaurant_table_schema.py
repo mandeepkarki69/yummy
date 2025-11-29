@@ -21,12 +21,14 @@ class RestaurantTableRead(BaseModel):
         
         
 class RestaurantTableUpdate(BaseModel):
-    table_name: str | None = None
+    name: str | None = None
     capacity: int | None = None
     table_type_id: int | None = None
     status: str | None = None
-    
-   
+
+    class Config:
+        from_attributes = True
+
         
 
 
