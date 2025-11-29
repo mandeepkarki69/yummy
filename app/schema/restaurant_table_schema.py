@@ -19,5 +19,14 @@ class RestaurantTableRead(BaseModel):
     class Config:
         from_attributes = True
         
+        
+class RestaurantTableUpdate(BaseModel):
+    table_name: str | None = None
+    capacity: int | None = None
+    table_type_id: int | None = None
+    status: str | None = None
+    
+   
+        
 
 

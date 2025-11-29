@@ -24,6 +24,12 @@ class RestaurantService:
         if not restaurant:
             raise HTTPException(status_code=404, detail="Restaurant not found")
         return restaurant
+    
+    async def get_restaurant_by_user_id(self, user_id: int):
+        restaurant = await self.repo.get_restaurant_by_user_id(user_id)
+        if not restaurant:
+            raise HTTPException(status_code=404, detail="Restaurant not found")
+        return restaurant
 
     async def update_restaurant(self, restaurant_id: int, data: RestaurantUpdate):
         restaurant = await self.repo.get_by_id(restaurant_id)

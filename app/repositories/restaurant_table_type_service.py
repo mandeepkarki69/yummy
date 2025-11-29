@@ -20,6 +20,7 @@ class RestaurantTableTypeRepository:
         )
         return result.scalars().first()
     
+    
     async def create_restaurant_table_type(self, table_type: TableType):
         self.db.add(table_type)
         await self.db.commit()

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.schema.restaurant_table_schema import RestaurantTableCreate, RestaurantTableRead
+from app.schema.restaurant_table_schema import RestaurantTableCreate, RestaurantTableRead, RestaurantTableUpdate
 from app.services.restaurant_table_service import RestaurantTableService
 from app.utils.oauth2 import get_current_user
 from app.utils.role_checker import RoleChecker
@@ -32,25 +32,35 @@ async def create_table(
         message="Table created successfully",
         data=table,
     )
-
-
-# Get All Tables for Restaurant
-@router.get(
-    "/{restaurant_id}",
-    response_model=BaseResponse[list[RestaurantTableRead]],
+    
+@router.put(
+    "/{table_id}",
+    response_model=BaseResponse[RestaurantTableRead],
     dependencies=[Depends(RoleChecker(["admin", "staff"]))],
 )
-async def get_all_tables(restaurant_id: int, db: AsyncSession = Depends(get_db)):
+async def update_table(table_id: int, data: RestaurantTableUpdate, db: AsyncSession = Depends(get_db)):
     service = RestaurantTableService(db)
-    tables = await service.get_all_restaurant_tables_by_restaurant_id(restaurant_id)
+    table = await service.update_restaurant_table(table_id, data)
 
     return BaseResponse(
         status="success",
-        message=f"{len(tables)} tables fetched successfully",
-        data=tables,
+        message="Table updated successfully",
+        data=table,
     )
+    
+@router.get(
+    "/by-table-type/{table_id}",  response_model=BaseResponse[RestaurantTableRead],
+    dependencies=[Depends(RoleChecker(["admin", "staff"]))],)
+async def get_table_by_table_type(table_id: int, db: AsyncSession = Depends(get_db)):
+    service = RestaurantTableService(db)
+    table = await service.get_table_by_table_type(table_id)
 
-
+    return BaseResponse(
+        status="success",
+        message="Table fetched successfully",
+        data=table,
+    )
+    
 # Get Single Table
 @router.get(
     "/single/{table_id}",
@@ -68,6 +78,23 @@ async def get_table(table_id: int, db: AsyncSession = Depends(get_db)):
     )
 
 
+
+# Get All Tables for Restaurant
+@router.get(
+    "/all/{restaurant_id}",
+    response_model=BaseResponse[list[RestaurantTableRead]],
+    dependencies=[Depends(RoleChecker(["admin", "staff"]))],
+)
+async def get_all_tables(restaurant_id: int, db: AsyncSession = Depends(get_db)):
+    service = RestaurantTableService(db)
+    tables = await service.get_all_restaurant_tables_by_restaurant_id(restaurant_id)
+
+    return BaseResponse(
+        status="success",
+        message=f"{len(tables)} tables fetched successfully",
+        data=tables,
+    )
+    
 # Delete Table
 @router.delete(
     "/{table_id}",

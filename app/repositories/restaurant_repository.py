@@ -11,6 +11,12 @@ class RestaurantRepository:
         await self.db.commit()
         await self.db.refresh(restaurant)
         return restaurant
+    
+    async def get_restaurant_by_user_id(self, user_id: int):
+        result = await self.db.execute(
+            select(Restaurant).where(Restaurant.registered_by == user_id)
+        )
+        return result.scalars().first()
 
     async def get_by_id(self, restaurant_id: int):
         result = await self.db.execute(

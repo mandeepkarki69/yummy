@@ -11,6 +11,21 @@ from app.schema.base_response import BaseResponse
 router = APIRouter(prefix="/restaurants", tags=["Restaurant"])
 
 
+    
+@router.get(
+    "/by-user", include_in_schema=True,  response_model=BaseResponse[RestaurantRead],
+    dependencies=[Depends(RoleChecker(["admin"]))])
+async def get_restaurant_by_user( db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)):
+    service = RestaurantService(db)
+    restaurant = await service.get_restaurant_by_user_id(current_user["user_id"])
+    return BaseResponse(
+        status="success",
+        message="Restaurant fetched successfully",
+        data=restaurant,
+    )
+
+
+
 # Create Restaurant
 @router.post(
     "/",
@@ -82,3 +97,5 @@ async def get_restaurant(restaurant_id: int, db: AsyncSession = Depends(get_db))
         message="Restaurant fetched successfully",
         data=restaurant,
     )
+
+

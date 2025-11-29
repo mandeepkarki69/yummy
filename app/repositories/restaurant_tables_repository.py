@@ -21,6 +21,10 @@ class RestaurantTablesRepository:
         await self.session.refresh(table)
         return table
     
+    async def get_table_by_table_type(self, table_type_id: int):
+        result = await self.session.execute(select(RestaurantTable).where(RestaurantTable.table_type_id == table_type_id))
+        return result.scalars().all()
+    
     async def update_restaurant_table(self, table: RestaurantTable):
         await self.session.commit()
         await self.session.refresh(table)

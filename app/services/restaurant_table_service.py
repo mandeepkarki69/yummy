@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.table_model import RestaurantTable
 from app.repositories.restaurant_tables_repository import RestaurantTablesRepository
-from app.schema.restaurant_table_schema import RestaurantTableCreate
+from app.schema.restaurant_table_schema import RestaurantTableCreate, RestaurantTableUpdate
 class RestaurantTableService:
     def __init__(self, db: AsyncSession):
         self.db = RestaurantTablesRepository(db)
@@ -23,6 +23,12 @@ class RestaurantTableService:
             raise HTTPException(status_code=404, detail="Restaurant table not found")
         return restaurant_table
     
+    async def get_table_by_table_type(self, table_type_id: int):
+        tables = await self.db.get_table_by_table_type(table_type_id)
+        if not tables:
+            raise HTTPException(status_code=404, detail="Tables not found")
+        return tables
+    
     async def create_restaurant_table(self, data: RestaurantTableCreate, restaurant_id: int):
         restaurant = RestaurantTable (
             table_name=data.name,
@@ -38,6 +44,16 @@ class RestaurantTableService:
             raise HTTPException(status_code=404, detail="Table not found")
         await self.db.delete_restaurant_table(table)
         return {"message": "Table deleted successfully"}
+    
+    async def update_restaurant_table(self , table_id: int , data: RestaurantTableUpdate):
+        table = await self.db.get_restaurant_table_by_id(table_id)
+        if not table:
+            raise HTTPException(status_code=404, detail="Table not found")
+        table.table_name = data.table_name
+        table.capacity = data.capacity
+        table.table_type_id = data.table_type_id
+        table.status = data.status
+        return await self.db.update_restaurant_table(table)
     
     
         
