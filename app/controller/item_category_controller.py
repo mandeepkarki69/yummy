@@ -35,6 +35,7 @@ async def create_item_category(
 @router.get(
     "/{item_category_id}",
     response_model=BaseResponse[ItemCategorySchemaRead],
+    dependencies=[Depends(RoleChecker(["admin", "staff"]))],
 )
 async def get_item_category(item_category_id: int, db: AsyncSession = Depends(get_db)):
     service = ItemCategoryService(db)

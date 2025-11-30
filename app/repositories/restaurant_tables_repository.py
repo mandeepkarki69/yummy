@@ -26,6 +26,20 @@ class RestaurantTablesRepository:
         await self.session.commit()
         await self.session.refresh(table)
         return table
+
+    async def validate_table_type_for_restaurant(self, restaurant_id: int, table_type_id: int):
+        table_type = await self.session.get(TableType, table_type_id)
+        if not table_type:
+            raise HTTPException(status_code=404, detail="Table type not found")
+        if table_type.restaurant_id != restaurant_id:
+            raise HTTPException(status_code=400, detail="Table type does not belong to this restaurant")
+        return table_type
+
+    async def ensure_restaurant_exists(self, restaurant_id: int):
+        restaurant = await self.session.get(Restaurant, restaurant_id)
+        if not restaurant:
+            raise HTTPException(status_code=404, detail="Restaurant not found")
+        return restaurant
     
     async def get_table_by_table_type(self, table_type_id: int):
         table_type = await self.session.get(TableType, table_type_id)

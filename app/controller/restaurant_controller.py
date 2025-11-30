@@ -87,6 +87,7 @@ async def delete_restaurant(restaurant_id: int, db: AsyncSession = Depends(get_d
 @router.get(
     "/{restaurant_id}",
     response_model=BaseResponse[RestaurantRead],
+    dependencies=[Depends(RoleChecker(["admin", "staff"]))],
 )
 async def get_restaurant(restaurant_id: int, db: AsyncSession = Depends(get_db)):
     service = RestaurantService(db)
@@ -97,5 +98,4 @@ async def get_restaurant(restaurant_id: int, db: AsyncSession = Depends(get_db))
         message="Restaurant fetched successfully",
         data=restaurant,
     )
-
 

@@ -1,6 +1,6 @@
 # app/schema/base_response.py
 from typing import Generic, Optional, List, TypeVar
-from pydantic import BaseModel  # <-- add this import
+from pydantic import BaseModel, Field
 from pydantic.generics import GenericModel
 
 T = TypeVar("T")
@@ -19,4 +19,4 @@ class ErrorDetail(BaseModel):
 class ErrorResponse(BaseModel):
     status: str = "error"
     message: str
-    errors: Optional[List[ErrorDetail]] = []
+    errors: List[ErrorDetail] = Field(default_factory=list)

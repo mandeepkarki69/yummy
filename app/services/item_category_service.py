@@ -22,15 +22,16 @@ class ItemCategoryService:
             raise HTTPException(status_code=404, detail="Item category not found")
         return category
     
-    async def create_item_category(self, item_category: ItemCategory, restaurant_id: int):
-        category = ItemCategory(name=item_category.name, restaurant_id=restaurant_id)
+    async def create_item_category(self, data, restaurant_id: int):
+        category = ItemCategory(name=data.name, restaurant_id=restaurant_id)
         return await self.repository.create_item_category(category)
     
-    async def  update_item_category(self, item_category: ItemCategory, item_category_id: int):
+    async def  update_item_category(self, data, item_category_id: int):
         category = await self.repository.get_item_category_by_id(item_category_id)
         if not category:
             raise HTTPException(status_code=404, detail="Item category not found")
-        category.name = item_category.name
+        if data.name is not None:
+            category.name = data.name
         return await self.repository.update_item_category(category)
     
     async def delete_item_category(self, item_category_id: int):

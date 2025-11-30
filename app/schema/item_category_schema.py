@@ -2,7 +2,6 @@ from pydantic import BaseModel
 
 class ItemCategorySchemaCreate(BaseModel):
     name: str 
-    restaurant_id : int
     
 class ItemCategorySchemaRead(BaseModel):
     id: int

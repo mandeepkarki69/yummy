@@ -28,6 +28,9 @@ class RestaurantTableService:
         return tables
     
     async def create_restaurant_table(self, data: RestaurantTableCreate, restaurant_id: int):
+        # Ensure restaurant and table type belong together before creating the table
+        await self.db.ensure_restaurant_exists(restaurant_id)
+        await self.db.validate_table_type_for_restaurant(restaurant_id, data.table_type_id)
         restaurant = RestaurantTable (
             table_name=data.name,
             capacity=data.capacity,
