@@ -12,8 +12,6 @@ class RestaurantTypeService:
 
     async def get_all_restaurant_table_types_by_id(self, restaurant_id: int):
         tabletypes = await self.repo.get_all_restaurant_table_types_by_id(restaurant_id)
-        if not tabletypes:
-            raise HTTPException(status_code=404, detail="Table types not found")
         return tabletypes
 
     async def create_restaurant_table_type(self, data: RestaurantTableTypeUpdate, restaurant_id: int):

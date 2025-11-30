@@ -1,7 +1,9 @@
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.models.table_type_model import TableType
+from app.models.restaurant_model import Restaurant
 
 
 class RestaurantTableTypeRepository:
@@ -9,6 +11,9 @@ class RestaurantTableTypeRepository:
         self.db = db
 
     async def get_all_restaurant_table_types_by_id(self, restaurant_id: int):
+        restaurant = await self.db.get(Restaurant, restaurant_id)
+        if not restaurant:
+            raise HTTPException(status_code=404, detail="Restaurant not found")
         result = await self.db.execute(
             select(TableType).where(TableType.restaurant_id == restaurant_id)
         )
