@@ -11,3 +11,8 @@ class AuthRepository:
         result = await self.db.execute(stmt)
         user = result.scalars().first()
         return user
+
+    async def get_by_id(self, user_id: int):
+        stmt = select(User).where(User.id == user_id)
+        result = await self.db.execute(stmt)
+        return result.scalars().first()
