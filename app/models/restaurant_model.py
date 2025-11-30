@@ -17,6 +17,7 @@ class Restaurant(Base):
     tables = relationship("RestaurantTable", back_populates="restaurant", cascade="all, delete")
     table_types = relationship("TableType", back_populates="restaurant", cascade="all, delete")
     categories = relationship("ItemCategory", back_populates="restaurant", cascade="all, delete")
+    menu_items = relationship("Menu", back_populates="restaurant", cascade="all, delete")
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

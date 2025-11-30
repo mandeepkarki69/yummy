@@ -13,3 +13,4 @@ class ItemCategory(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     restaurant = relationship("Restaurant", back_populates="categories")
+    menu_items = relationship("Menu", back_populates="category")

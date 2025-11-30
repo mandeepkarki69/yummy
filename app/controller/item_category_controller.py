@@ -64,4 +64,16 @@ async def update_item_category(item_category_id: int, data: ItemCategorySchemaUp
         data=category,
     )
     
-    
+@router.delete(
+    "/{item_category_id}",
+    response_model=BaseResponse[None],
+    dependencies=[Depends(RoleChecker(["admin"]))],
+)
+async def delete_item_category(item_category_id: int, db: AsyncSession = Depends(get_db)):
+    service = ItemCategoryService(db)
+    await service.delete_item_category(item_category_id)
+    return BaseResponse(
+        status="success",
+        message="Item category deleted successfully",
+        data=None,
+    )
