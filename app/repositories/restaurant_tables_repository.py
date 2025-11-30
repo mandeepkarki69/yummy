@@ -6,6 +6,8 @@ class RestaurantTablesRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
         
+    
+        
         
     async  def get_all_restaurant_tables_by_restaurant_id(self, restaurant_id: int):
         result = await self.session.execute(select(RestaurantTable).where(RestaurantTable.restaurant_id == restaurant_id))
@@ -31,7 +33,7 @@ class RestaurantTablesRepository:
         return table
     
     async def delete_restaurant_table(self, table: RestaurantTable):
-        await self.session.delete(table)   # 👈 required
+        await self.session.delete(table)   
         await self.session.commit()
         return table
 

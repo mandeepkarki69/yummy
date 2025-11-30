@@ -12,8 +12,6 @@ class RestaurantTableService:
     
     async def get_all_restaurant_tables_by_restaurant_id(self, restaurant_id: int):
         restaurant_tables = await self.db.get_all_restaurant_tables_by_restaurant_id(restaurant_id)
-        if not restaurant_tables:
-            raise HTTPException(status_code=404, detail="Restaurant tables not found")
         return restaurant_tables
         
     
