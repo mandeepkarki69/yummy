@@ -31,9 +31,13 @@ class RestaurantTablesRepository:
         return table
     
     async def delete_restaurant_table(self, table: RestaurantTable):
-        self.session.delete(table)
+        await self.session.delete(table)   # 👈 required
         await self.session.commit()
         return table
+
+
+    
+  
     
     
     
