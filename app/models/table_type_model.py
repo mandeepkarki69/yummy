@@ -9,10 +9,4 @@ class TableType(Base):
     name = Column(String, nullable=False)
     restaurant_id = Column(Integer, ForeignKey("restaurant_info.id", ondelete="CASCADE"))
 
-    restaurant = relationship("Restaurant", back_populates="table_types")
-    tables = relationship(
-        "RestaurantTable",
-        back_populates="table_type_rel",
-        cascade="all, delete-orphan",  # <- important for cascading deletes
-        passive_deletes=True            # <- tells SQLAlchemy to rely on DB cascade
-    )
+    restaurant = relationship("Restaurant", back_populates="table_types", passive_deletes=True)
