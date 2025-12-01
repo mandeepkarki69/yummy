@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     DATABASE_SSL: bool = True
     APP_NAME: str = "Yummy API"
     DEBUG: bool = True
+    USE_S3_UPLOADS: bool = False
+    AWS_S3_BUCKET: str | None = None
+    AWS_S3_REGION: str | None = None
+    AWS_S3_ENDPOINT_URL: str | None = None
+    AWS_S3_PUBLIC_URL_PREFIX: str | None = None
 
     class Config:
         env_file = ".env"

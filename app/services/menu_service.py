@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 from uuid import uuid4
+from urllib.parse import urlparse
+import boto3
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -8,9 +10,10 @@ from sqlalchemy.future import select
 from app.models.menu_model import Menu
 from app.models.item_category_model import ItemCategory
 from app.repositories.menu_repository import MenuRepository
+from app.core.config import settings
 
 
-# Keep uploads under the app directory to align with the StaticFiles mount in main.py
+# Keep uploads under the app directory to align with the StaticFiles mount in main.py (local fallback)
 BASE_DIR = Path(__file__).resolve().parents[1]
 UPLOAD_DIR = BASE_DIR / "uploads" / "menu"
 
@@ -19,29 +22,74 @@ class MenuService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.repo = MenuRepository(db)
+        self.use_s3 = bool(settings.USE_S3_UPLOADS and settings.AWS_S3_BUCKET)
+        self.s3_client = None
+        if self.use_s3:
+            self.s3_client = boto3.client(
+                "s3",
+                region_name=settings.AWS_S3_REGION,
+                endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+            )
 
     async def _save_image(self, image: UploadFile | None) -> str | None:
         if not image:
             return None
-        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         ext = Path(image.filename).suffix or ""
         filename = f"{uuid4().hex}{ext}"
-        file_path = UPLOAD_DIR / filename
         content = await image.read()
-        file_path.write_bytes(content)
-        # Store relative path so it can be served via /uploads
-        return str(Path("uploads") / "menu" / filename)
+
+        if self.use_s3 and self.s3_client:
+            key = f"menu/{filename}"
+            self.s3_client.put_object(
+                Bucket=settings.AWS_S3_BUCKET,
+                Key=key,
+                Body=content,
+                ContentType=image.content_type or "application/octet-stream",
+                ACL="public-read",
+            )
+            return self._build_public_url(key)
+        else:
+            UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+            file_path = UPLOAD_DIR / filename
+            file_path.write_bytes(content)
+            return str(Path("uploads") / "menu" / filename)
 
     async def _remove_image(self, path: str | None):
-        if path:
-            absolute_path = (BASE_DIR / path).resolve()
-        else:
-            absolute_path = None
-        if absolute_path and absolute_path.exists():
+        if not path:
+            return
+        # If using S3 and the path is a URL or key
+        if self.use_s3 and self.s3_client:
+            key = self._extract_key(path)
+            if key:
+                try:
+                    self.s3_client.delete_object(Bucket=settings.AWS_S3_BUCKET, Key=key)
+                except Exception:
+                    pass
+            return
+
+        # Local removal
+        absolute_path = (BASE_DIR / path).resolve()
+        if absolute_path.exists():
             try:
                 os.remove(absolute_path)
             except OSError:
                 pass
+
+    def _build_public_url(self, key: str) -> str:
+        if settings.AWS_S3_PUBLIC_URL_PREFIX:
+            return f"{settings.AWS_S3_PUBLIC_URL_PREFIX.rstrip('/')}/{key}"
+        if settings.AWS_S3_ENDPOINT_URL:
+            return f"{settings.AWS_S3_ENDPOINT_URL.rstrip('/')}/{key}"
+        if settings.AWS_S3_REGION:
+            return f"https://{settings.AWS_S3_BUCKET}.s3.{settings.AWS_S3_REGION}.amazonaws.com/{key}"
+        return f"https://{settings.AWS_S3_BUCKET}.s3.amazonaws.com/{key}"
+
+    def _extract_key(self, path: str) -> str | None:
+        # If already looks like a key (no scheme), return as-is
+        if not path.startswith("http"):
+            return path.lstrip("/")
+        parsed = urlparse(path)
+        return parsed.path.lstrip("/") if parsed.path else None
 
     async def create_menu(self, restaurant_id: int, data, image: UploadFile | None = None):
         await self.repo.ensure_restaurant(restaurant_id)
