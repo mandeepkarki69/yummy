@@ -1,7 +1,9 @@
 import logging
 import time
+from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request, status, Depends
 from fastapi.exceptions import RequestValidationError
+from fastapi.staticfiles import StaticFiles
 
 from app.controller import user_controller
 from app.controller import auth_controller
@@ -19,6 +21,11 @@ import asyncio
 from app.core.exception_handlers import http_exception_handler, validation_exception_handler
 
 app = FastAPI(title="Yummy API", version="1.0")
+
+BASE_DIR = Path(__file__).resolve().parents[1]
+UPLOAD_ROOT = BASE_DIR / "uploads"
+UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_ROOT), name="uploads")
 
 logger = logging.getLogger("yummy.middleware")
 
