@@ -22,7 +22,7 @@ from app.core.exception_handlers import http_exception_handler, validation_excep
 
 app = FastAPI(title="Yummy API", version="1.0")
 
-BASE_DIR = Path(__file__).resolve().parents[1]
+BASE_DIR = Path(__file__).resolve().parents[0]
 UPLOAD_ROOT = BASE_DIR / "uploads"
 UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_ROOT), name="uploads")

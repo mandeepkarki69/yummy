@@ -2,7 +2,6 @@ import os
 from pathlib import Path
 from uuid import uuid4
 from urllib.parse import urlparse
-import boto3
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -22,9 +21,15 @@ class MenuService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.repo = MenuRepository(db)
-        self.use_s3 = bool(settings.USE_S3_UPLOADS and settings.AWS_S3_BUCKET)
+        # Force local storage for now; flip to True with config when ready to use S3 again
+        self.use_s3 = False
         self.s3_client = None
         if self.use_s3:
+            try:
+                import boto3  # Lazy import so local-only setups don't require boto3
+            except ImportError:
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="boto3 not installed")
+
             self.s3_client = boto3.client(
                 "s3",
                 region_name=settings.AWS_S3_REGION,
