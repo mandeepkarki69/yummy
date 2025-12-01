@@ -10,7 +10,8 @@ from app.models.item_category_model import ItemCategory
 from app.repositories.menu_repository import MenuRepository
 
 
-UPLOAD_DIR = Path("uploads/menu")
+BASE_DIR = Path(__file__).resolve().parents[2]
+UPLOAD_DIR = BASE_DIR / "uploads" / "menu"
 
 
 class MenuService:
@@ -27,12 +28,17 @@ class MenuService:
         file_path = UPLOAD_DIR / filename
         content = await image.read()
         file_path.write_bytes(content)
-        return str(file_path)
+        # Store relative path so it can be served via /uploads
+        return str(Path("uploads") / "menu" / filename)
 
     async def _remove_image(self, path: str | None):
-        if path and os.path.exists(path):
+        if path:
+            absolute_path = (BASE_DIR / path).resolve()
+        else:
+            absolute_path = None
+        if absolute_path and absolute_path.exists():
             try:
-                os.remove(path)
+                os.remove(absolute_path)
             except OSError:
                 pass
 
