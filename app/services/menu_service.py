@@ -10,7 +10,8 @@ from app.models.item_category_model import ItemCategory
 from app.repositories.menu_repository import MenuRepository
 
 
-BASE_DIR = Path(__file__).resolve().parents[2]
+# Keep uploads under the app directory to align with the StaticFiles mount in main.py
+BASE_DIR = Path(__file__).resolve().parents[1]
 UPLOAD_DIR = BASE_DIR / "uploads" / "menu"
 
 
