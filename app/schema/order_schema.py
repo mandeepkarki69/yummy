@@ -92,6 +92,7 @@ class OrderRead(BaseModel):
     restaurant_id: int
     channel: OrderChannelEnum
     table_id: Optional[int]
+    table_name: Optional[str] = None
     group_id: Optional[int]
     customer_name: Optional[str]
     customer_phone: Optional[str]

@@ -50,6 +50,7 @@ class Order(Base):
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan", lazy="selectin")
     payments = relationship("OrderPayment", back_populates="order", cascade="all, delete-orphan", lazy="selectin")
     events = relationship("OrderEvent", back_populates="order", cascade="all, delete-orphan", lazy="selectin")
+    table = relationship("RestaurantTable", back_populates="orders", lazy="selectin")
 
     __table_args__ = (
         Index("ix_orders_restaurant_status_created", "restaurant_id", "status", "created_at"),
@@ -57,6 +58,10 @@ class Order(Base):
         Index("ix_orders_table", "table_id"),
         Index("ix_orders_group", "group_id"),
     )
+
+    @property
+    def table_name(self):
+        return self.table.table_name if self.table else None
 
 
 class OrderItem(Base):

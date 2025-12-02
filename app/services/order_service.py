@@ -114,13 +114,19 @@ class OrderService:
 
         created = await self.repo.create_order(order)
         await self.repo.add_event(created.id, "order_created", {"status": order.status.value}, actor_id)
-        return created
+        return await self.get_order(created.id)
 
     async def get_order(self, order_id: int):
         order = await self.repo.get_order(order_id)
         if not order:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
         return order
+
+    async def get_orders_by_table(self, table_id: int, status_filter: Optional[List[OrderStatusEnum]], channel: Optional[str], search: Optional[str], skip: int, limit: int):
+        table = await self.repo.get_table_by_id(table_id)
+        if not table:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Table not found")
+        return await self.list_orders(table.restaurant_id, status_filter, channel, table_id, search, skip, limit)
 
     async def list_orders(self, restaurant_id: int, status_filter: Optional[List[OrderStatusEnum]], channel: Optional[str], table_id: Optional[int], search: Optional[str], skip: int, limit: int):
         status_values = [OrderStatus(s.value) for s in status_filter] if status_filter else None

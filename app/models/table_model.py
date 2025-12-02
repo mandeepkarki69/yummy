@@ -13,3 +13,4 @@ class RestaurantTable(Base):
     status = Column(String, nullable=True, server_default="free")
     
     restaurant = relationship("Restaurant", back_populates="tables", passive_deletes=True)
+    orders = relationship("Order", back_populates="table", passive_deletes=True)

@@ -3,11 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func
 from sqlalchemy.orm import selectinload
-from fastapi import HTTPException, status
 
 from app.models.order_model import Order, OrderItem, OrderPayment, OrderEvent, OrderStatus
 from app.models.menu_model import Menu
 from app.models.item_category_model import ItemCategory
+from app.models.table_model import RestaurantTable
 
 
 class OrderRepository:
@@ -27,6 +27,7 @@ class OrderRepository:
                 selectinload(Order.items),
                 selectinload(Order.payments),
                 selectinload(Order.events),
+                selectinload(Order.table),
             )
             .where(Order.id == order_id)
         )
@@ -36,6 +37,7 @@ class OrderRepository:
         query = select(Order).options(
             selectinload(Order.items),
             selectinload(Order.payments),
+            selectinload(Order.table),
         ).where(Order.restaurant_id == restaurant_id)
         if status_filter:
             query = query.where(Order.status.in_(status_filter))
@@ -86,3 +88,6 @@ class OrderRepository:
             return None
         category = await self.db.get(ItemCategory, category_id)
         return category.name if category else None
+
+    async def get_table_by_id(self, table_id: int):
+        return await self.db.get(RestaurantTable, table_id)

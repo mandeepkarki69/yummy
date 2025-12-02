@@ -43,6 +43,21 @@ async def get_order(order_id: int, db: AsyncSession = Depends(get_db)):
     return BaseResponse(status="success", message="Order fetched", data=order)
 
 
+@router.get("/table/{table_id}", response_model=BaseResponse[OrderListRead])
+async def get_orders_by_table(
+    table_id: int,
+    status: Optional[List[OrderStatusEnum]] = Query(None),
+    channel: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    skip: int = 0,
+    limit: int = 50,
+    db: AsyncSession = Depends(get_db),
+):
+    service = OrderService(db)
+    orders, total = await service.get_orders_by_table(table_id, status, channel, search, skip, limit)
+    return BaseResponse(status="success", message="Orders fetched", data={"orders": orders, "total": total})
+
+
 @router.get("/", response_model=BaseResponse[OrderListRead])
 async def list_orders(
     restaurant_id: int,
@@ -106,4 +121,3 @@ async def delete_order(order_id: int, db: AsyncSession = Depends(get_db), curren
     service = OrderService(db)
     result = await service.delete_order(order_id)
     return BaseResponse(status="success", message="Order deleted", data=result)
-
