@@ -47,9 +47,9 @@ class Order(Base):
     canceled_at = Column(DateTime(timezone=True), nullable=True)
     cancel_reason = Column(String, nullable=True)
 
-    items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
-    payments = relationship("OrderPayment", back_populates="order", cascade="all, delete-orphan")
-    events = relationship("OrderEvent", back_populates="order", cascade="all, delete-orphan")
+    items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan", lazy="selectin")
+    payments = relationship("OrderPayment", back_populates="order", cascade="all, delete-orphan", lazy="selectin")
+    events = relationship("OrderEvent", back_populates="order", cascade="all, delete-orphan", lazy="selectin")
 
     __table_args__ = (
         Index("ix_orders_restaurant_status_created", "restaurant_id", "status", "created_at"),

@@ -18,7 +18,11 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 # Handle validation errors
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    errors = [ErrorDetail(field=e["loc"][-1], error=e["msg"]) for e in exc.errors()]
+    def _field(loc):
+        last = loc[-1] if loc else "unknown"
+        return str(last)
+
+    errors = [ErrorDetail(field=_field(e["loc"]), error=e["msg"]) for e in exc.errors()]
     return JSONResponse(
         status_code=422,
         content={

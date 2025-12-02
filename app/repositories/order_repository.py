@@ -2,6 +2,7 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func
+from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
 from app.models.order_model import Order, OrderItem, OrderPayment, OrderEvent, OrderStatus
@@ -20,11 +21,22 @@ class OrderRepository:
         return order
 
     async def get_order(self, order_id: int):
-        result = await self.db.execute(select(Order).where(Order.id == order_id))
+        result = await self.db.execute(
+            select(Order)
+            .options(
+                selectinload(Order.items),
+                selectinload(Order.payments),
+                selectinload(Order.events),
+            )
+            .where(Order.id == order_id)
+        )
         return result.scalars().first()
 
     async def list_orders(self, restaurant_id: int, status_filter: Optional[List[OrderStatus]] = None, channel: Optional[str] = None, table_id: Optional[int] = None, search: Optional[str] = None, skip: int = 0, limit: int = 50):
-        query = select(Order).where(Order.restaurant_id == restaurant_id)
+        query = select(Order).options(
+            selectinload(Order.items),
+            selectinload(Order.payments),
+        ).where(Order.restaurant_id == restaurant_id)
         if status_filter:
             query = query.where(Order.status.in_(status_filter))
         if channel:

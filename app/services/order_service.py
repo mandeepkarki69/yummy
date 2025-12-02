@@ -80,11 +80,14 @@ class OrderService:
         order_items = await self._validate_menu_items(payload.restaurant_id, payload.items)
         subtotal, tax_total, service_charge, discount_total, grand_total = self._calc_totals(order_items)
 
+        table_id = payload.table_id if payload.table_id not in (None, 0) else None
+        group_id = payload.group_id if payload.group_id not in (None, 0) else None
+
         order = Order(
             restaurant_id=payload.restaurant_id,
             channel=payload.channel.value,
-            table_id=payload.table_id,
-            group_id=payload.group_id,
+            table_id=table_id,
+            group_id=group_id,
             customer_name=payload.customer_name,
             customer_phone=payload.customer_phone,
             status=OrderStatus.pending,
@@ -154,9 +157,9 @@ class OrderService:
         if data.customer_phone is not None:
             order.customer_phone = data.customer_phone
         if data.table_id is not None:
-            order.table_id = data.table_id
+            order.table_id = data.table_id if data.table_id not in (0,) else None
         if data.group_id is not None:
-            order.group_id = data.group_id
+            order.group_id = data.group_id if data.group_id not in (0,) else None
         await self.repo.update_order(order)
         await self.repo.add_event(order.id, "order_updated", data.dict(exclude_none=True), actor_id)
         return order
