@@ -12,6 +12,7 @@ from app.controller import restaurant_table_type_controller
 from app.controller import restaurant_table_controller
 from app.controller import item_category_controller
 from app.controller import menu_controller
+from app.controller import order_controller
 
 from app.core.database import engine, Base
 from app.core.config import settings
@@ -84,6 +85,7 @@ app.include_router(restaurant_table_controller.router)
 app.include_router(restaurant_table_type_controller.router)
 app.include_router(item_category_controller.router)
 app.include_router(menu_controller.router)
+app.include_router(order_controller.router)
 
 
 @app.get("/health", tags=["Monitoring"])
