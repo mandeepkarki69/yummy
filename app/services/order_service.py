@@ -21,6 +21,7 @@ from app.schema.order_schema import (
     PaymentMethodEnum,
     OrderUpdate,
     OrderAddItems,
+    OrderItemsChannelUpdate,
     OrderAddPayment,
     OrderCancel,
 )
@@ -184,6 +185,32 @@ class OrderService:
         order.grand_total = grand_total
         await self.repo.update_order(order)
         await self.repo.add_event(order.id, "items_updated", {}, actor_id)
+        return order
+
+    async def update_items_by_channel(self, order_id: int, payload: OrderItemsChannelUpdate, actor_id: Optional[int]):
+        if payload.table_id is None and payload.group_id is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="table_id or group_id is required")
+        order = await self.get_order(order_id)
+        if order.status not in [OrderStatus.pending, OrderStatus.accepted]:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot modify items in current status")
+
+        if payload.table_id is not None:
+            if order.table_id != payload.table_id:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order does not belong to table")
+        if payload.group_id is not None:
+            if order.group_id != payload.group_id:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order does not belong to group")
+
+        new_items = await self._validate_menu_items(order.restaurant_id, payload.items)
+        order.items = new_items
+        subtotal, tax_total, service_charge, discount_total, grand_total = self._calc_totals(order.items)
+        order.subtotal = subtotal
+        order.tax_total = tax_total
+        order.service_charge = service_charge
+        order.discount_total = discount_total
+        order.grand_total = grand_total
+        await self.repo.update_order(order)
+        await self.repo.add_event(order.id, "items_updated_by_channel", {"table_id": payload.table_id, "group_id": payload.group_id}, actor_id)
         return order
 
     async def add_payment(self, order_id: int, payload: OrderAddPayment, actor_id: Optional[int]):

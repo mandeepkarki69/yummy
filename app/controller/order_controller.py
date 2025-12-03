@@ -12,6 +12,7 @@ from app.schema.order_schema import (
     OrderUpdate,
     OrderStatusUpdate,
     OrderAddItems,
+    OrderItemsChannelUpdate,
     OrderAddPayment,
     OrderCancel,
     OrderEventRead,
@@ -92,6 +93,13 @@ async def update_order(order_id: int, payload: OrderUpdate, db: AsyncSession = D
 async def add_items(order_id: int, payload: OrderAddItems, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)):
     service = OrderService(db)
     order = await service.add_items(order_id, payload, _actor(current_user))
+    return BaseResponse(status="success", message="Items updated", data=order)
+
+
+@router.put("/{order_id}/items/by-channel", response_model=BaseResponse[OrderRead])
+async def update_items_by_channel(order_id: int, payload: OrderItemsChannelUpdate, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)):
+    service = OrderService(db)
+    order = await service.update_items_by_channel(order_id, payload, _actor(current_user))
     return BaseResponse(status="success", message="Items updated", data=order)
 
 

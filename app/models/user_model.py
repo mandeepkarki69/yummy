@@ -15,6 +15,7 @@ class User(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    
 
     # Cascade: delete all restaurants if user deleted
     restaurants = relationship("Restaurant", back_populates="user", cascade="all, delete")

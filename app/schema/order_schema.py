@@ -136,6 +136,12 @@ class OrderAddItems(BaseModel):
     items: List[OrderItemCreate]
 
 
+class OrderItemsChannelUpdate(BaseModel):
+    table_id: Optional[int] = None
+    group_id: Optional[int] = None
+    items: List[OrderItemCreate]
+
+
 class OrderAddPayment(BaseModel):
     payment: OrderPaymentCreate
 
