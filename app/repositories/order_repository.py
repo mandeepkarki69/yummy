@@ -54,6 +54,20 @@ class OrderRepository:
         )
         return result.scalars().first()
 
+    async def get_order_for_update(self, order_id: int):
+        result = await self.db.execute(
+            select(Order)
+            .options(
+                selectinload(Order.items),
+                selectinload(Order.payments),
+                selectinload(Order.events),
+                selectinload(Order.table),
+            )
+            .where(Order.id == order_id)
+            .with_for_update()
+        )
+        return result.scalars().first()
+
     async def list_orders(self, restaurant_id: int, status_filter: Optional[List[OrderStatus]] = None, channel: Optional[str] = None, table_id: Optional[int] = None, search: Optional[str] = None, skip: int = 0, limit: int = 50):
         query = select(Order).options(
             selectinload(Order.items),

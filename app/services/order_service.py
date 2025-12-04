@@ -26,6 +26,9 @@ from app.schema.order_schema import (
     OrderItemsChannelUpdate,
     OrderAddSingleItem,
     OrderItemQuantityUpdate,
+    OrderBulkAddItems,
+    OrderBulkUpdateItems,
+    OrderItemUpsert,
     OrderAddPayment,
     OrderCancel,
 )
@@ -66,6 +69,43 @@ class OrderService:
 
     def _find_item(self, order: Order, item_id: int) -> OrderItem | None:
         return next((i for i in order.items if i.id == item_id), None)
+
+    async def _get_order_for_update(self, order_id: int):
+        order = await self.repo.get_order_for_update(order_id)
+        if not order:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+        return order
+
+    async def _get_menu_lookup(self, restaurant_id: int, menu_ids: List[int]):
+        if not menu_ids:
+            return {}
+        menu_models = await self.repo.get_menu_items(menu_ids)
+        menu_map = {m.id: m for m in menu_models}
+        if len(menu_map) != len(set(menu_ids)):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid menu item")
+        category_cache: dict[int | None, Optional[str]] = {}
+        lookup = {}
+        for menu_id, menu in menu_map.items():
+            if menu.restaurant_id != restaurant_id:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Menu item not found for restaurant")
+            if menu.item_category_id not in category_cache:
+                category_cache[menu.item_category_id] = await self.repo.get_category_name(menu.item_category_id)
+            lookup[menu_id] = {
+                "menu": menu,
+                "category_name": category_cache[menu.item_category_id],
+            }
+        return lookup
+
+    def _merge_items_payload(self, items_payload: List[OrderItemUpsert] | List[OrderItemCreate]):
+        merged: dict[int, dict[str, Optional[str] | int]] = {}
+        for itm in items_payload:
+            if itm.menu_item_id not in merged:
+                merged[itm.menu_item_id] = {"qty": itm.qty, "notes": itm.notes}
+            else:
+                merged[itm.menu_item_id]["qty"] += itm.qty  # type: ignore
+                if itm.notes is not None:
+                    merged[itm.menu_item_id]["notes"] = itm.notes
+        return merged
 
     async def _validate_menu_items(self, restaurant_id: int, items_payload) -> List[OrderItem]:
         menu_ids = [i.menu_item_id for i in items_payload]
@@ -231,6 +271,64 @@ class OrderService:
         new_items = await self._validate_menu_items(order.restaurant_id, payload.items)
         return await self._add_items_to_order(order, new_items, actor_id)
 
+    async def bulk_add_items(self, order_id: int, payload: OrderBulkAddItems, actor_id: Optional[int]):
+        order = await self._get_order_for_update(order_id)
+        self._ensure_items_mutable(order)
+        merged_payload = self._merge_items_payload(payload.items)
+        if not merged_payload:
+            return order
+
+        menu_lookup = await self._get_menu_lookup(order.restaurant_id, list(merged_payload.keys()))
+        added_existing: List[tuple[OrderItem, int]] = []
+        added_new: List[OrderItem] = []
+        for menu_id, incoming in merged_payload.items():
+            qty = int(incoming["qty"] or 0)
+            notes = incoming.get("notes")
+            if qty <= 0:
+                continue
+            existing = next((i for i in order.items if i.menu_item_id == menu_id), None)
+            if existing:
+                added_existing.append((existing, qty))
+                existing.qty += qty
+                if notes is not None:
+                    existing.notes = notes
+                existing.unit_price = self._money(self._dec(existing.unit_price))
+                existing.line_total = self._money(self._dec(existing.unit_price) * existing.qty)
+                continue
+            menu = menu_lookup[menu_id]["menu"]
+            unit_price = self._money(menu.price)
+            line_total = self._money(unit_price * qty)
+            order_item = OrderItem(
+                menu_item_id=menu_id,
+                name_snapshot=menu.name,
+                category_name_snapshot=menu_lookup[menu_id]["category_name"],
+                unit_price=unit_price,
+                qty=qty,
+                line_total=line_total,
+                notes=notes,
+            )
+            order.items.append(order_item)
+            added_new.append(order_item)
+
+        await self._recalculate_order_totals(order)
+        await self.repo.update_order(order)
+
+        for itm, delta in added_existing:
+            await self.repo.add_event(
+                order.id,
+                "item_added",
+                {"item_id": itm.id, "menu_item_id": itm.menu_item_id, "qty": itm.qty, "delta_qty": delta},
+                actor_id,
+            )
+        for itm in added_new:
+            await self.repo.add_event(
+                order.id,
+                "item_added",
+                {"item_id": itm.id, "menu_item_id": itm.menu_item_id, "qty": itm.qty},
+                actor_id,
+            )
+        return order
+
     async def update_items_by_channel(self, order_id: int, payload: OrderItemsChannelUpdate, actor_id: Optional[int]):
         if payload.table_id is None and payload.group_id is None:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="table_id or group_id is required")
@@ -257,6 +355,84 @@ class OrderService:
         self._ensure_items_mutable(order)
         items = await self._validate_menu_items(order.restaurant_id, [payload.item])
         return await self._add_items_to_order(order, items, actor_id)
+
+    async def bulk_update_items(self, order_id: int, payload: OrderBulkUpdateItems, actor_id: Optional[int]):
+        order = await self._get_order_for_update(order_id)
+        self._ensure_items_mutable(order)
+        merged_payload = self._merge_items_payload(payload.items)
+        payload_menu_ids = set(merged_payload.keys())
+        menu_lookup = await self._get_menu_lookup(order.restaurant_id, list(payload_menu_ids))
+
+        added_items: List[OrderItem] = []
+        updated_items: List[OrderItem] = []
+        removed_items: List[dict] = []
+
+        existing_map = {itm.menu_item_id: itm for itm in order.items if itm.menu_item_id is not None}
+
+        for menu_id, incoming in merged_payload.items():
+            qty = int(incoming["qty"] or 0)
+            notes = incoming.get("notes")
+            menu_info = menu_lookup.get(menu_id)
+            if menu_info is None:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid menu item")
+
+            if qty <= 0:
+                item_to_remove = existing_map.get(menu_id)
+                if item_to_remove and item_to_remove in order.items:
+                    removed_items.append({"item_id": item_to_remove.id, "menu_item_id": item_to_remove.menu_item_id})
+                    order.items.remove(item_to_remove)
+                continue
+
+            if menu_id in existing_map:
+                item = existing_map[menu_id]
+                item.qty = qty
+                if notes is not None:
+                    item.notes = notes
+                item.unit_price = self._money(self._dec(item.unit_price))
+                item.line_total = self._money(self._dec(item.unit_price) * item.qty)
+                updated_items.append(item)
+            else:
+                unit_price = self._money(menu_info["menu"].price)
+                line_total = self._money(unit_price * qty)
+                new_item = OrderItem(
+                    menu_item_id=menu_id,
+                    name_snapshot=menu_info["menu"].name,
+                    category_name_snapshot=menu_info["category_name"],
+                    unit_price=unit_price,
+                    qty=qty,
+                    line_total=line_total,
+                    notes=notes,
+                )
+                order.items.append(new_item)
+                added_items.append(new_item)
+
+        for item in list(order.items):
+            if item.menu_item_id in payload_menu_ids:
+                continue
+            removed_items.append({"item_id": item.id, "menu_item_id": item.menu_item_id})
+            order.items.remove(item)
+
+        await self._recalculate_order_totals(order)
+        await self.repo.update_order(order)
+
+        for itm in added_items:
+            await self.repo.add_event(
+                order.id,
+                "item_added",
+                {"item_id": itm.id, "menu_item_id": itm.menu_item_id, "qty": itm.qty},
+                actor_id,
+            )
+        for itm in updated_items:
+            await self.repo.add_event(
+                order.id,
+                "item_updated",
+                {"item_id": itm.id, "menu_item_id": itm.menu_item_id, "qty": itm.qty, "notes": itm.notes},
+                actor_id,
+            )
+        for itm in removed_items:
+            await self.repo.add_event(order.id, "item_removed", itm, actor_id)
+
+        return order
 
     async def update_item_quantity(self, order_id: int, item_id: int, payload: OrderItemQuantityUpdate, actor_id: Optional[int]):
         order = await self.get_order(order_id)

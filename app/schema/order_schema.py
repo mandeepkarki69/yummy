@@ -161,10 +161,24 @@ class OrderItemQuantityUpdate(BaseModel):
     qty: int = Field(gt=0)
 
 
+class OrderItemUpsert(BaseModel):
+    menu_item_id: int
+    qty: int
+    notes: Optional[str] = None
+
+
 class OrderItemsChannelUpdate(BaseModel):
     table_id: Optional[int] = None
     group_id: Optional[int] = None
     items: List[OrderItemCreate]
+
+
+class OrderBulkAddItems(BaseModel):
+    items: List[OrderItemCreate]
+
+
+class OrderBulkUpdateItems(BaseModel):
+    items: List[OrderItemUpsert]
 
 
 class OrderAddPayment(BaseModel):

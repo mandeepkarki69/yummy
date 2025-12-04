@@ -15,6 +15,8 @@ from app.schema.order_schema import (
     OrderItemsChannelUpdate,
     OrderAddSingleItem,
     OrderItemQuantityUpdate,
+    OrderBulkAddItems,
+    OrderBulkUpdateItems,
     OrderAddPayment,
     OrderCancel,
     OrderEventRead,
@@ -96,6 +98,20 @@ async def update_order(order_id: int, payload: OrderUpdate, db: AsyncSession = D
 async def add_items(order_id: int, payload: OrderAddItems, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)):
     service = OrderService(db)
     order = await service.add_items(order_id, payload, _actor(current_user))
+    return BaseResponse(status="success", message="Items updated", data=order)
+
+
+@router.post("/{order_id}/items/bulk-add", response_model=BaseResponse[OrderRead])
+async def bulk_add_items(order_id: int, payload: OrderBulkAddItems, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)):
+    service = OrderService(db)
+    order = await service.bulk_add_items(order_id, payload, _actor(current_user))
+    return BaseResponse(status="success", message="Items updated", data=order)
+
+
+@router.post("/{order_id}/items/bulk-update", response_model=BaseResponse[OrderRead])
+async def bulk_update_items(order_id: int, payload: OrderBulkUpdateItems, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)):
+    service = OrderService(db)
+    order = await service.bulk_update_items(order_id, payload, _actor(current_user))
     return BaseResponse(status="success", message="Items updated", data=order)
 
 
