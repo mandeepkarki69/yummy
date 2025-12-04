@@ -20,6 +20,27 @@ class OrderRepository:
         await self.db.refresh(order)
         return order
 
+    async def get_active_order_for_table(self, table_id: int):
+        active_statuses = [
+            OrderStatus.pending,
+            OrderStatus.accepted,
+            OrderStatus.preparing,
+            OrderStatus.ready,
+            OrderStatus.served,
+        ]
+        result = await self.db.execute(
+            select(Order)
+            .options(
+                selectinload(Order.items),
+                selectinload(Order.payments),
+                selectinload(Order.table),
+            )
+            .where(Order.table_id == table_id)
+            .where(Order.status.in_(active_statuses))
+            .order_by(Order.created_at.desc())
+        )
+        return result.scalars().first()
+
     async def get_order(self, order_id: int):
         result = await self.db.execute(
             select(Order)

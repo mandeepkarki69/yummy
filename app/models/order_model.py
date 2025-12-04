@@ -10,6 +10,7 @@ class OrderStatus(enum.Enum):
     accepted = "accepted"
     preparing = "preparing"
     ready = "ready"
+    served = "served"
     completed = "completed"
     canceled = "canceled"
 

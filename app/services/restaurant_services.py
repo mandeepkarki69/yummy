@@ -15,7 +15,9 @@ class RestaurantService:
             address=data.address,
             phone=data.phone,
             description=data.description,
-            registered_by=user_id
+            registered_by=user_id,
+            tax_rate=data.tax_rate,
+            service_charge_rate=data.service_charge_rate,
         )
         return await self.repo.create(restaurant)
 
@@ -44,6 +46,10 @@ class RestaurantService:
             restaurant.phone = data.phone
         if data.description is not None:
             restaurant.description = data.description
+        if data.tax_rate is not None:
+            restaurant.tax_rate = data.tax_rate
+        if data.service_charge_rate is not None:
+            restaurant.service_charge_rate = data.service_charge_rate
 
         return await self.repo.update(restaurant)
 

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, func
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, func, Numeric
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
@@ -12,6 +12,8 @@ class Restaurant(Base):
     phone = Column(String, nullable=False)
     description = Column(String, nullable=True)
     registered_by = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    tax_rate = Column(Numeric(5, 2), nullable=False, default=0)
+    service_charge_rate = Column(Numeric(5, 2), nullable=False, default=0)
 
     user = relationship("User", back_populates="restaurants", passive_deletes=True)
     tables = relationship("RestaurantTable", back_populates="restaurant", cascade="all, delete")

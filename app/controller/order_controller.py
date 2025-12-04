@@ -13,10 +13,13 @@ from app.schema.order_schema import (
     OrderStatusUpdate,
     OrderAddItems,
     OrderItemsChannelUpdate,
+    OrderAddSingleItem,
+    OrderItemQuantityUpdate,
     OrderAddPayment,
     OrderCancel,
     OrderEventRead,
     OrderPaymentRead,
+    OrderBillRead,
 )
 from app.schema.base_response import BaseResponse
 from app.utils.oauth2 import get_current_user
@@ -96,6 +99,27 @@ async def add_items(order_id: int, payload: OrderAddItems, db: AsyncSession = De
     return BaseResponse(status="success", message="Items updated", data=order)
 
 
+@router.post("/{order_id}/items/add", response_model=BaseResponse[OrderRead])
+async def add_item(order_id: int, payload: OrderAddSingleItem, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)):
+    service = OrderService(db)
+    order = await service.add_item(order_id, payload, _actor(current_user))
+    return BaseResponse(status="success", message="Item added", data=order)
+
+
+@router.patch("/{order_id}/items/{item_id}", response_model=BaseResponse[OrderRead])
+async def update_item_quantity(order_id: int, item_id: int, payload: OrderItemQuantityUpdate, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)):
+    service = OrderService(db)
+    order = await service.update_item_quantity(order_id, item_id, payload, _actor(current_user))
+    return BaseResponse(status="success", message="Item quantity updated", data=order)
+
+
+@router.delete("/{order_id}/items/{item_id}", response_model=BaseResponse[OrderRead])
+async def remove_item(order_id: int, item_id: int, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)):
+    service = OrderService(db)
+    order = await service.remove_item(order_id, item_id, _actor(current_user))
+    return BaseResponse(status="success", message="Item removed", data=order)
+
+
 @router.put("/{order_id}/items/by-channel", response_model=BaseResponse[OrderRead])
 async def update_items_by_channel(order_id: int, payload: OrderItemsChannelUpdate, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)):
     service = OrderService(db)
@@ -122,6 +146,13 @@ async def get_events(order_id: int, db: AsyncSession = Depends(get_db)):
     service = OrderService(db)
     events = await service.get_events(order_id)
     return BaseResponse(status="success", message="Events fetched", data=events)
+
+
+@router.get("/{order_id}/bill", response_model=BaseResponse[OrderBillRead])
+async def get_bill(order_id: int, db: AsyncSession = Depends(get_db)):
+    service = OrderService(db)
+    bill = await service.get_bill(order_id)
+    return BaseResponse(status="success", message="Bill generated", data=bill)
 
 
 @router.delete("/{order_id}", response_model=BaseResponse[dict])
