@@ -1,5 +1,4 @@
 from datetime import datetime
-from decimal import Decimal, ROUND_HALF_UP
 from typing import List, Optional
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +12,6 @@ from app.models.order_model import (
     OrderEvent,
     OrderStatus,
     OrderChannel,
-    PaymentStatus,
 )
 from app.schema.order_schema import (
     OrderCreate,
@@ -38,8 +36,7 @@ STATUS_FLOW = {
     OrderStatus.pending: [OrderStatus.accepted, OrderStatus.canceled],
     OrderStatus.accepted: [OrderStatus.preparing, OrderStatus.canceled],
     OrderStatus.preparing: [OrderStatus.ready, OrderStatus.canceled],
-    OrderStatus.ready: [OrderStatus.served, OrderStatus.canceled],
-    OrderStatus.served: [OrderStatus.completed, OrderStatus.canceled],
+    OrderStatus.ready: [OrderStatus.completed, OrderStatus.canceled],
     OrderStatus.completed: [],
     OrderStatus.canceled: [],
 }
@@ -119,63 +116,34 @@ class OrderService:
             menu = menu_map.get(itm.menu_item_id)
             if not menu or menu.restaurant_id != restaurant_id:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Menu item not found for restaurant")
-            unit_price = self._money(menu.price)
-            line_total = self._money(unit_price * itm.qty)
+            line_total = float(menu.price) * itm.qty
             category_name = await self.repo.get_category_name(menu.item_category_id)
             order_items.append(OrderItem(
                 menu_item_id=menu.id,
                 name_snapshot=menu.name,
                 category_name_snapshot=category_name,
-                unit_price=unit_price,
+                unit_price=menu.price,
                 qty=itm.qty,
                 line_total=line_total,
                 notes=itm.notes,
             ))
         return order_items
 
-    def _calc_totals(self, items: List[OrderItem], restaurant):
-        subtotal = sum(self._money(i.line_total) for i in items) if items else self._money(0)
-        tax_rate = self._dec(getattr(restaurant, "tax_rate", 0) or 0)
-        service_rate = self._dec(getattr(restaurant, "service_charge_rate", 0) or 0)
-        tax_total = self._money(subtotal * tax_rate / Decimal("100"))
-        service_charge = self._money(subtotal * service_rate / Decimal("100"))
-        discount_total = self._money(0)
+    def _calc_totals(self, items: List[OrderItem]):
+        subtotal = sum(float(i.line_total) for i in items)
+        tax_total = 0.0
+        service_charge = 0.0
+        discount_total = 0.0
         grand_total = subtotal + tax_total + service_charge - discount_total
         return subtotal, tax_total, service_charge, discount_total, grand_total
 
-    async def _recalculate_order_totals(self, order: Order):
-        restaurant = await self._get_restaurant(order.restaurant_id)
-        subtotal, tax_total, service_charge, discount_total, grand_total = self._calc_totals(order.items, restaurant)
-        order.subtotal = subtotal
-        order.tax_total = tax_total
-        order.service_charge = service_charge
-        order.discount_total = discount_total
-        order.grand_total = grand_total
-
-    async def _add_items_to_order(self, order: Order, items: List[OrderItem], actor_id: Optional[int], extra_event_payload: dict | None = None):
-        for itm in items:
-            order.items.append(itm)
-        await self._recalculate_order_totals(order)
-        await self.repo.update_order(order)
-        for itm in items:
-            payload = {"item_id": itm.id, "menu_item_id": itm.menu_item_id, "qty": itm.qty}
-            if extra_event_payload:
-                payload.update(extra_event_payload)
-            await self.repo.add_event(order.id, "item_added", payload, actor_id)
-        return order
-
     async def create_order(self, payload: OrderCreate, actor_id: Optional[int]):
-        restaurant = await self._get_restaurant(payload.restaurant_id)
+        await self.restaurant_repo.get_by_id(payload.restaurant_id)
         order_items = await self._validate_menu_items(payload.restaurant_id, payload.items)
+        subtotal, tax_total, service_charge, discount_total, grand_total = self._calc_totals(order_items)
 
         table_id = payload.table_id if payload.table_id not in (None, 0) else None
         group_id = payload.group_id if payload.group_id not in (None, 0) else None
-        if table_id:
-            existing = await self.repo.get_active_order_for_table(table_id)
-            if existing:
-                return existing
-
-        subtotal, tax_total, service_charge, discount_total, grand_total = self._calc_totals(order_items, restaurant)
 
         order = Order(
             restaurant_id=payload.restaurant_id,
@@ -200,7 +168,7 @@ class OrderService:
             for p in payload.payments:
                 payments.append(OrderPayment(
                     method=p.method.value,
-                    amount=self._money(p.amount),
+                    amount=p.amount,
                     reference=p.reference,
                     status=p.status.value,
                 ))
@@ -208,7 +176,6 @@ class OrderService:
 
         created = await self.repo.create_order(order)
         await self.repo.add_event(created.id, "order_created", {"status": order.status.value}, actor_id)
-        await self._auto_complete_if_paid(created, actor_id)
         return await self.get_order(created.id)
 
     async def get_order(self, order_id: int):
@@ -242,7 +209,7 @@ class OrderService:
         order.status = OrderStatus(new_status.value)
         now = datetime.utcnow()
         if new_status == OrderStatusEnum.completed:
-            order.completed_at = order.completed_at or now
+            order.completed_at = now
         if new_status == OrderStatusEnum.canceled:
             order.canceled_at = now
         await self.repo.update_order(order)
@@ -267,7 +234,8 @@ class OrderService:
 
     async def add_items(self, order_id: int, payload: OrderAddItems, actor_id: Optional[int]):
         order = await self.get_order(order_id)
-        self._ensure_items_mutable(order)
+        if order.status not in [OrderStatus.pending, OrderStatus.accepted]:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot modify items in current status")
         new_items = await self._validate_menu_items(order.restaurant_id, payload.items)
         return await self._add_items_to_order(order, new_items, actor_id)
 
@@ -333,7 +301,8 @@ class OrderService:
         if payload.table_id is None and payload.group_id is None:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="table_id or group_id is required")
         order = await self.get_order(order_id)
-        self._ensure_items_mutable(order)
+        if order.status not in [OrderStatus.pending, OrderStatus.accepted]:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot modify items in current status")
 
         if payload.table_id is not None:
             if order.table_id != payload.table_id:
@@ -444,36 +413,7 @@ class OrderService:
         item.line_total = self._money(self._dec(item.unit_price) * payload.qty)
         await self._recalculate_order_totals(order)
         await self.repo.update_order(order)
-        await self.repo.add_event(order.id, "item_qty_changed", {"item_id": item.id, "qty": item.qty}, actor_id)
-        return order
-
-    async def remove_item(self, order_id: int, item_id: int, actor_id: Optional[int]):
-        order = await self.get_order(order_id)
-        self._ensure_items_mutable(order)
-        item = self._find_item(order, item_id)
-        if not item:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
-        order.items.remove(item)
-        await self._recalculate_order_totals(order)
-        await self.repo.update_order(order)
-        await self.repo.add_event(order.id, "item_removed", {"item_id": item.id, "menu_item_id": item.menu_item_id}, actor_id)
-        return order
-
-    def _total_paid(self, order: Order) -> Decimal:
-        return sum(
-            self._money(p.amount)
-            for p in order.payments
-            if PaymentStatus(p.status) == PaymentStatus.success
-        )
-
-    async def _auto_complete_if_paid(self, order: Order, actor_id: Optional[int]):
-        if order.status in (OrderStatus.completed, OrderStatus.canceled):
-            return order
-        if self._total_paid(order) >= self._money(order.grand_total):
-            order.status = OrderStatus.completed
-            order.completed_at = datetime.utcnow()
-            await self.repo.update_order(order)
-            await self.repo.add_event(order.id, "status_changed", {"status": OrderStatus.completed.value, "auto": True}, actor_id)
+        await self.repo.add_event(order.id, "items_updated_by_channel", {"table_id": payload.table_id, "group_id": payload.group_id}, actor_id)
         return order
 
     async def add_payment(self, order_id: int, payload: OrderAddPayment, actor_id: Optional[int]):
@@ -482,34 +422,13 @@ class OrderService:
         payment = OrderPayment(
             order_id=order.id,
             method=p.method.value,
-            amount=self._money(p.amount),
+            amount=p.amount,
             reference=p.reference,
             status=p.status.value,
         )
         await self.repo.add_payment(payment)
-        await self.repo.add_event(order.id, "payment_added", {"amount": float(payment.amount), "method": p.method.value}, actor_id)
-        updated_order = await self.get_order(order_id)
-        await self._auto_complete_if_paid(updated_order, actor_id)
+        await self.repo.add_event(order.id, "payment_added", {"amount": p.amount, "method": p.method.value}, actor_id)
         return payment
-
-    async def get_bill(self, order_id: int):
-        order = await self.get_order(order_id)
-        total_paid = self._total_paid(order)
-        balance_due = self._money(self._money(order.grand_total) - total_paid)
-        if balance_due < 0:
-            balance_due = self._money(0)
-        return {
-            "order_id": order.id,
-            "items": order.items,
-            "payments": order.payments,
-            "subtotal": float(order.subtotal),
-            "tax_total": float(order.tax_total),
-            "service_charge": float(order.service_charge),
-            "discount_total": float(order.discount_total),
-            "grand_total": float(order.grand_total),
-            "total_paid": float(total_paid),
-            "balance_due": float(balance_due),
-        }
 
     async def cancel_order(self, order_id: int, payload: OrderCancel, actor_id: Optional[int]):
         order = await self.get_order(order_id)

@@ -21,7 +21,6 @@ from app.schema.order_schema import (
     OrderCancel,
     OrderEventRead,
     OrderPaymentRead,
-    OrderBillRead,
 )
 from app.schema.base_response import BaseResponse
 from app.utils.oauth2 import get_current_user
@@ -162,13 +161,6 @@ async def get_events(order_id: int, db: AsyncSession = Depends(get_db)):
     service = OrderService(db)
     events = await service.get_events(order_id)
     return BaseResponse(status="success", message="Events fetched", data=events)
-
-
-@router.get("/{order_id}/bill", response_model=BaseResponse[OrderBillRead])
-async def get_bill(order_id: int, db: AsyncSession = Depends(get_db)):
-    service = OrderService(db)
-    bill = await service.get_bill(order_id)
-    return BaseResponse(status="success", message="Bill generated", data=bill)
 
 
 @router.delete("/{order_id}", response_model=BaseResponse[dict])

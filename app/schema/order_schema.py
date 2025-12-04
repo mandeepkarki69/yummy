@@ -9,7 +9,6 @@ class OrderStatusEnum(str, Enum):
     accepted = "accepted"
     preparing = "preparing"
     ready = "ready"
-    served = "served"
     completed = "completed"
     canceled = "canceled"
 
@@ -119,22 +118,6 @@ class OrderRead(BaseModel):
 class OrderListRead(BaseModel):
     orders: List[OrderRead]
     total: int
-
-
-class OrderBillRead(BaseModel):
-    order_id: int
-    items: List[OrderItemRead]
-    payments: List[OrderPaymentRead]
-    subtotal: float
-    tax_total: float
-    service_charge: float
-    discount_total: float
-    grand_total: float
-    total_paid: float
-    balance_due: float
-
-    class Config:
-        from_attributes = True
 
 
 class OrderStatusUpdate(BaseModel):
