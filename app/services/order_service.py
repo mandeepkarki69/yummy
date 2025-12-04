@@ -140,6 +140,37 @@ class OrderService:
         grand_total = subtotal + tax_total + service_charge - discount_total
         return subtotal, tax_total, service_charge, discount_total, grand_total
 
+    async def _recalculate_order_totals(self, order: Order):
+        subtotal = sum(self._dec(i.line_total) for i in order.items)
+        tax_total = self._dec(order.tax_total)
+        service_charge = self._dec(order.service_charge)
+        discount_total = self._dec(order.discount_total)
+
+        order.subtotal = self._money(subtotal)
+        order.tax_total = self._money(tax_total)
+        order.service_charge = self._money(service_charge)
+        order.discount_total = self._money(discount_total)
+        order.grand_total = self._money(order.subtotal + order.tax_total + order.service_charge - order.discount_total)
+
+    async def _add_items_to_order(self, order: Order, items: List[OrderItem], actor_id: Optional[int], metadata: Optional[dict] = None):
+        if not items:
+            return order
+
+        order.items.extend(items)
+        await self._recalculate_order_totals(order)
+        await self.repo.update_order(order)
+
+        meta = {k: v for k, v in (metadata or {}).items() if v is not None}
+        for itm in items:
+            payload = {"item_id": itm.id, "menu_item_id": itm.menu_item_id, "qty": itm.qty, "notes": itm.notes}
+            payload.update(meta)
+            await self.repo.add_event(order.id, "item_added", payload, actor_id)
+
+        if meta:
+            await self.repo.add_event(order.id, "items_updated_by_channel", meta, actor_id)
+
+        return order
+
     async def create_order(self, payload: OrderCreate, actor_id: Optional[int]):
         await self.restaurant_repo.get_by_id(payload.restaurant_id)
         order_items = await self._validate_menu_items(payload.restaurant_id, payload.items)
@@ -416,7 +447,12 @@ class OrderService:
         item.line_total = self._money(self._dec(item.unit_price) * payload.qty)
         await self._recalculate_order_totals(order)
         await self.repo.update_order(order)
-        await self.repo.add_event(order.id, "items_updated_by_channel", {"table_id": payload.table_id, "group_id": payload.group_id}, actor_id)
+        await self.repo.add_event(
+            order.id,
+            "item_quantity_updated",
+            {"item_id": item.id, "menu_item_id": item.menu_item_id, "qty": item.qty},
+            actor_id,
+        )
         return order
 
     async def add_payment(self, order_id: int, payload: OrderAddPayment, actor_id: Optional[int]):
