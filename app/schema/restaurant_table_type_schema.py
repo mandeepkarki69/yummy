@@ -10,13 +10,13 @@ class RestaurantTableTypeRead(BaseModel):
     restaurant_id: int
     
     class Config:
-        orm_mode = True
+        from_attributes = True
         
 class RestaurantTableTypeUpdate(BaseModel):
     name: str | None = None
     
     class Config:
-        orm_mode = True
+        from_attributes = True
     
     
         

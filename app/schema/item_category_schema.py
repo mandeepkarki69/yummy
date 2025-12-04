@@ -9,7 +9,7 @@ class ItemCategorySchemaRead(BaseModel):
     restaurant_id : int
     
     class Config:
-        orm_mode = True
+        from_attributes = True
         
 class ItemCategorySchemaUpdate(BaseModel):
     name: str | None = None

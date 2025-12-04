@@ -22,7 +22,7 @@ class AdminRead(BaseModel):
     token_type: str
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class UserRead(BaseModel):
     id: int
@@ -32,7 +32,7 @@ class UserRead(BaseModel):
     created_by: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
         
 class UserLogin(BaseModel):
     email: EmailStr
@@ -48,7 +48,7 @@ class LoginResponse(BaseModel):
     user_role: str
     
     class Config:
-        orm_mode = True
+        from_attributes = True
     
      
 class TokenData(BaseModel):
