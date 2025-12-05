@@ -25,6 +25,32 @@ def _send_with_settings(host, port, username, password, sender, message, use_ssl
 
 
 def send_email(to_email: str, subject: str, body: str):
+    # Provider 1: SendGrid (HTTPS)
+    sg_key = settings.SENDGRID_API_KEY
+    sg_from = settings.SENDGRID_FROM or settings.SMTP_FROM
+    if sg_key and sg_from:
+        try:
+            resp = requests.post(
+                "https://api.sendgrid.com/v3/mail/send",
+                headers={
+                    "Authorization": f"Bearer {sg_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "personalizations": [{"to": [{"email": to_email}]}],
+                    "from": {"email": sg_from},
+                    "subject": subject,
+                    "content": [{"type": "text/plain", "value": body}],
+                },
+                timeout=10,
+            )
+            if resp.status_code >= 400:
+                raise RuntimeError(f"SendGrid API error: {resp.status_code} {resp.text}")
+            return
+        except Exception as exc:
+            raise RuntimeError(f"Failed to send email via SendGrid: {exc}") from exc
+
+    # Provider 2: Resend (HTTPS)
     api_key = settings.RESEND_API_KEY
     api_from = settings.RESEND_FROM or settings.SMTP_FROM
     if api_key and api_from:
@@ -45,6 +71,31 @@ def send_email(to_email: str, subject: str, body: str):
             return
         except Exception as exc:
             raise RuntimeError(f"Failed to send email via Resend: {exc}") from exc
+
+    # Provider 3: Mailtrap Send API (HTTPS)
+    mt_token = settings.MAILTRAP_API_TOKEN
+    mt_from = settings.MAILTRAP_FROM or settings.SMTP_FROM
+    if mt_token and mt_from:
+        try:
+            resp = requests.post(
+                "https://send.api.mailtrap.io/api/send",
+                headers={
+                    "Authorization": f"Bearer {mt_token}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": {"email": mt_from},
+                    "to": [{"email": to_email}],
+                    "subject": subject,
+                    "text": body,
+                },
+                timeout=10,
+            )
+            if resp.status_code >= 400:
+                raise RuntimeError(f"Mailtrap API error: {resp.status_code} {resp.text}")
+            return
+        except Exception as exc:
+            raise RuntimeError(f"Failed to send email via Mailtrap: {exc}") from exc
 
     host = settings.SMTP_HOST
     port = settings.SMTP_PORT

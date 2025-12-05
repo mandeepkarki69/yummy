@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     SMTP_FROM: str | None = None
     RESEND_API_KEY: str | None = None
     RESEND_FROM: str | None = None
+    MAILTRAP_API_TOKEN: str | None = None
+    MAILTRAP_FROM: str | None = None
+    SENDGRID_API_KEY: str | None = None
+    SENDGRID_FROM: str | None = None
     USE_S3_UPLOADS: bool = False
     AWS_S3_BUCKET: str | None = None
     AWS_S3_REGION: str | None = None
