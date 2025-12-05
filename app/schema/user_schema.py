@@ -4,7 +4,7 @@ from typing import Optional
 class UserCreate(BaseModel):
     name: str
     email: EmailStr
-    password: str
+    password: str | None = None
     role: str
     
 class AdminCreate(BaseModel):
@@ -12,6 +12,14 @@ class AdminCreate(BaseModel):
     email: EmailStr
     password: str
     confirm_password: str
+
+
+class AdminRegisterVerify(AdminCreate):
+    otp: str
+
+
+class AdminRegisterResend(BaseModel):
+    email: EmailStr
     
 class AdminRead(BaseModel):
     id: int
@@ -61,3 +69,13 @@ class RefreshRequest(BaseModel):
 
 class LogoutRequest(BaseModel):
     refresh_token: Optional[str] = None
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    otp: str
+    new_password: str

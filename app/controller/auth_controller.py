@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.services.auth_services import AuthServices
-from app.schema.user_schema import LoginResponse, RefreshRequest, LogoutRequest
+from app.schema.user_schema import LoginResponse, RefreshRequest, LogoutRequest, ForgotPasswordRequest, ResetPasswordRequest
 from app.schema.base_response import BaseResponse
 from app.utils.oauth2 import oauth2_scheme
 
@@ -60,3 +60,17 @@ async def logout(
         message="Logged out successfully",
         data=result
     )
+
+
+@router.post("/forgot-password", response_model=BaseResponse[dict])
+async def forgot_password(data: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    service = AuthServices(db)
+    result = await service.forgot_password(data)
+    return BaseResponse(status="success", message="If that email exists, an OTP has been sent", data=result)
+
+
+@router.post("/reset-password", response_model=BaseResponse[dict])
+async def reset_password(data: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    service = AuthServices(db)
+    result = await service.reset_password(data)
+    return BaseResponse(status="success", message=result["message"], data={"message": result["message"]})

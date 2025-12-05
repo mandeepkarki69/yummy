@@ -4,24 +4,43 @@ from app.utils.role_checker import RoleChecker
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.schema.user_schema import UserCreate, UserRead, AdminCreate, AdminRead
+from app.schema.user_schema import UserCreate, UserRead, AdminCreate, AdminRead, AdminRegisterVerify, AdminRegisterResend
 from app.services.user_services import UserService
 from app.schema.base_response import BaseResponse
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@router.post("/admin/register", response_model=BaseResponse[AdminRead], status_code=status.HTTP_201_CREATED)
-async def create_admin_user(user: AdminCreate, db: AsyncSession = Depends(get_db) ):
+@router.post("/admin/register", response_model=BaseResponse[dict], status_code=status.HTTP_200_OK)
+async def admin_register_request(user: AdminCreate, db: AsyncSession = Depends(get_db) ):
      service = UserService(db)
-     existing_user = await service.repo.get_user_by_email(user.email)
-     if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-     new_user = await service.create_admin_user(user)
+     result = await service.admin_register_request(user)
+     return BaseResponse(
+        status="success",
+        message="OTP sent to email",
+        data=result
+    )
+
+
+@router.post("/admin/register/verify", response_model=BaseResponse[AdminRead], status_code=status.HTTP_201_CREATED)
+async def admin_register_verify(payload: AdminRegisterVerify, db: AsyncSession = Depends(get_db) ):
+     service = UserService(db)
+     new_user = await service.admin_register_verify(payload)
      return BaseResponse(
         status="success",
         message="Admin user created successfully",
         data=new_user
+    )
+
+
+@router.post("/admin/register/resend", response_model=BaseResponse[dict], status_code=status.HTTP_200_OK)
+async def admin_register_resend(payload: AdminRegisterResend, db: AsyncSession = Depends(get_db) ):
+     service = UserService(db)
+     result = await service.admin_register_resend(payload)
+     return BaseResponse(
+        status="success",
+        message="OTP sent to email",
+        data=result
     )
 
 @router.post("/", response_model=BaseResponse[UserRead],
