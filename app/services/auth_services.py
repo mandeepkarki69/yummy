@@ -121,9 +121,9 @@ class AuthServices:
             )
 
         code = self._generate_otp()
+        await self._send_reset_code(user, code)
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=self.otp_expiry_minutes)
         await self.repo.create_reset_code(user.id, code, expires_at)
-        await self._send_reset_code(user, code)
         return {"message": "OTP sent"}
 
     async def reset_password(self, data: ResetPasswordRequest):

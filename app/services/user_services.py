@@ -127,8 +127,8 @@ class UserService:
 
         code = self._generate_otp()
         expires_at = now + timedelta(minutes=self.otp_expiry_minutes)
-        await self.repo.create_admin_register_code(data.email, code, expires_at)
         await self._send_admin_otp(data.email, code, data.name)
+        await self.repo.create_admin_register_code(data.email, code, expires_at)
         return {"message": "OTP sent"}
 
     async def admin_register_verify(self, data: AdminRegisterVerify):
@@ -174,8 +174,8 @@ class UserService:
 
         code = self._generate_otp()
         expires_at = now + timedelta(minutes=self.otp_expiry_minutes)
-        await self.repo.create_admin_register_code(data.email, code, expires_at)
         await self._send_admin_otp(data.email, code, data.email.split("@")[0])
+        await self.repo.create_admin_register_code(data.email, code, expires_at)
         return {"message": "OTP sent"}
 
 
