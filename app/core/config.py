@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     SMTP_USERNAME: str | None = None
     SMTP_PASSWORD: str | None = None
     SMTP_FROM: str | None = None
+    RESEND_API_KEY: str | None = None
+    RESEND_FROM: str | None = None
     USE_S3_UPLOADS: bool = False
     AWS_S3_BUCKET: str | None = None
     AWS_S3_REGION: str | None = None

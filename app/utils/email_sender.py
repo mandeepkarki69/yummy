@@ -1,5 +1,7 @@
 import smtplib
 from email.message import EmailMessage
+from typing import Optional
+import requests
 from app.core.config import settings
 
 
@@ -23,6 +25,27 @@ def _send_with_settings(host, port, username, password, sender, message, use_ssl
 
 
 def send_email(to_email: str, subject: str, body: str):
+    api_key = settings.RESEND_API_KEY
+    api_from = settings.RESEND_FROM or settings.SMTP_FROM
+    if api_key and api_from:
+        try:
+            resp = requests.post(
+                "https://api.resend.com/emails",
+                headers={"Authorization": f"Bearer {api_key}"},
+                json={
+                    "from": api_from,
+                    "to": [to_email],
+                    "subject": subject,
+                    "text": body,
+                },
+                timeout=10,
+            )
+            if resp.status_code >= 400:
+                raise RuntimeError(f"Resend API error: {resp.status_code} {resp.text}")
+            return
+        except Exception as exc:
+            raise RuntimeError(f"Failed to send email via Resend: {exc}") from exc
+
     host = settings.SMTP_HOST
     port = settings.SMTP_PORT
     username = settings.SMTP_USERNAME
